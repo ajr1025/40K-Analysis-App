@@ -1,0 +1,13 @@
+{
+  "name": "Attack Efficiency",
+  "short_name": "Attack Eff",
+  "description": "Points-trade efficiency for Warhammer 40,000, 11th edition.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#171715",
+  "theme_color": "#171715",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

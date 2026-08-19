@@ -315,30 +315,35 @@
   .empty p { margin: 0 auto 20px; max-width: 410px; font-size: 13.5px; color: var(--ink-3); line-height: 1.55; }
 
   /* ---------- phone ---------- */
-  .phone-section { margin-top: 46px; }
-  .phone-section h2 { margin: 0 0 3px; font-family: var(--serif); font-size: 21px; font-weight: 400; }
-  .phone-section .sub { color: var(--ink-3); font-size: 13px; margin-bottom: 18px; }
-  .flow { display: flex; gap: 38px; flex-wrap: wrap; align-items: flex-start; }
-  .phone { width: 340px; background: var(--page); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px 14px 18px; }
+  /* ---------- ranked view (narrow screens) ---------- */
+  .ranked { background: var(--page); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px 12px 16px; }
   .phone-top { display: flex; gap: 9px; align-items: center; margin-bottom: 14px; }
-  .phone-attacker { font-family: var(--serif); font-size: 17px; }
+  .phone-top select { flex: 1; }
+  .phone-attacker { font-family: var(--serif); font-size: 17px; margin-bottom: 12px; }
   .phone-attacker small { color: var(--ink-3); font-size: 12.5px; display: block; margin-top: 2px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
   /* Colour is set inline per card; text inherits so it stays legible on every
      step of the ramp. */
-  .mcard { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; position: relative; border: 1px solid var(--rule-soft); }
+  .mcard { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; position: relative; border: 1px solid var(--rule-soft); border-radius: var(--r); }
   .mcard .t { font-size: 13.5px; }
   .mcard .s { font-size: 12px; color: var(--ink-3); margin-top: 1px; font-variant-numeric: tabular-nums; }
   .mcard .e { font-family: var(--serif); font-size: 20px; font-variant-numeric: tabular-nums; }
-  .notes { max-width: 360px; }
-  .notes h3 { font-family: var(--serif); font-size: 15px; font-weight: 400; margin: 0 0 4px; }
-  .notes h3::after { content: ""; display: block; width: 28px; height: 1px; background: var(--bronze-dim); margin: 6px 0 12px; }
-  .notes p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 0 0 12px; }
-  .notes b { color: var(--ink); font-weight: 400; }
 
   @media (max-width: 940px) {
     .board { grid-template-columns: minmax(0, 1fr); }
     .rail { position: static; }
     .zones { grid-template-columns: 1fr; }
     .zone + .zone { border-left: 0; border-top: 1px solid var(--rule-soft); }
+  }
+
+  /* A phone gets the ranked view, so the page only has to hold one column. */
+  @media (max-width: 760px) {
+    .wrap { padding: 18px 13px 48px; }
+    .masthead h1 { font-size: 24px; }
+    .toolbar { gap: 10px; padding: 11px 13px; }
+    .toolbar .spacer { display: none; }
+    .field { flex: 1 1 100%; }
+    .field select { flex: 1; }
+    .zone { padding: 13px 13px 15px; }
+    .legend { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

@@ -25,3 +25,6 @@ dist-ssr
 
 # Cached upstream catalogues (~80MB, re-downloadable via `npm run data`)
 .cache
+
+# Build output
+dist

@@ -28,6 +28,8 @@ import { LoadoutPanel } from './LoadoutPanel';
 import { Matrix, cellFor } from './Matrix';
 import { ModifierDrawer } from './ModifierDrawer';
 import { Rail } from './Rail';
+import { Ranked } from './Ranked';
+import { useNarrow } from './useNarrow';
 import { decodeBoard, encodeBoard } from './url';
 import './app.css';
 
@@ -46,6 +48,13 @@ function startingModifiers(): Modifiers {
 let nextId = 0;
 const newId = () => `u${(nextId += 1)}`;
 
+/**
+ * The board arrives in the hash, and the effect that keeps the hash in step
+ * runs before the one that restores from it. Read once at module load, before
+ * React can write an empty board over the link someone just opened.
+ */
+const INCOMING = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+
 export default function App() {
   const [index, setIndex] = useState<SearchEntry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -62,6 +71,10 @@ export default function App() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [phoneUnit, setPhoneUnit] = useState(0);
+  // Nothing is written to the address bar until any incoming board is restored.
+  const [restored, setRestored] = useState(!INCOMING);
+  const narrow = useNarrow();
 
   useEffect(() => {
     loadSearch().then(setIndex).catch((e: Error) => setLoadError(e.message));
@@ -125,6 +138,7 @@ export default function App() {
 
   // --- share link -----------------------------------------------------------
   useEffect(() => {
+    if (!restored) return;
     const encoded = encodeBoard(
       attackers,
       targets,
@@ -138,13 +152,16 @@ export default function App() {
     if (window.location.hash !== next) {
       window.history.replaceState(null, '', `${window.location.pathname}${next}`);
     }
-  }, [attackers, targets, modifiers, scope, armyRule, detachmentName, toughness]);
+  }, [restored, attackers, targets, modifiers, scope, armyRule, detachmentName, toughness]);
 
   // Restore a shared board once the search index is available.
   useEffect(() => {
-    if (!index.length) return;
-    const state = decodeBoard(window.location.hash.slice(1));
-    if (!state) return;
+    if (!index.length || restored) return;
+    const state = decodeBoard(INCOMING);
+    if (!state) {
+      setRestored(true);
+      return;
+    }
 
     let cancelled = false;
     (async () => {
@@ -190,6 +207,7 @@ export default function App() {
       setArmyRule(state.armyRule ?? null);
       setDetachmentName(state.detachment ?? null);
       setToughness(state.toughness ?? []);
+      setRestored(true);
     })();
 
     return () => {
@@ -375,7 +393,21 @@ export default function App() {
 
       <div className="board">
         <div>
-          {empty || shownTargets.length === 0 ? (
+          {narrow && !empty ? (
+            <Ranked
+              attackers={attackers}
+              targets={shownTargets}
+              modifiers={modifiers}
+              scope={scope}
+              detachment={detachment}
+              active={phoneUnit}
+              onPick={setPhoneUnit}
+              onRemove={(id) => {
+                setAttackers((current) => current.filter((a) => a.id !== id));
+                setPhoneUnit(0);
+              }}
+            />
+          ) : empty || shownTargets.length === 0 ? (
             <div className="panel empty open">
               <h2>Nothing on the board yet</h2>
               <p>
