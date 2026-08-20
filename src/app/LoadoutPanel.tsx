@@ -20,16 +20,19 @@ import {
   variantsOf,
 } from '../engine/wargear';
 import { optionalRules } from '../engine/detachments';
-import { type Attacker, attackerContext, unitBuffs } from './board';
+import type { Modifiers } from '../engine/resolve';
+import { type Attacker, attackerContext, unitBuffs, weaponKey } from './board';
+import { type Shown, shownProfile } from './profile';
 
 interface Props {
   attacker: Attacker;
   detachment: Detachment | null;
   leaders: DataUnit[];
+  modifiers: Modifiers;
   onChange: (next: Attacker) => void;
 }
 
-export function LoadoutPanel({ attacker, detachment, leaders, onChange }: Props) {
+export function LoadoutPanel({ attacker, detachment, leaders, modifiers, onChange }: Props) {
   const variants = variantsOf(attacker.unit);
   const size = loadoutSize(attacker.loadout);
   const problems = validateLoadout(attacker.unit, attacker.loadout);
@@ -86,7 +89,7 @@ export function LoadoutPanel({ attacker, detachment, leaders, onChange }: Props)
         </div>
       </div>
 
-      <WeaponTable attacker={attacker} />
+      <WeaponTable attacker={attacker} modifiers={modifiers} onChange={onChange} />
 
       {leaders.length ? (
         <div className="leadrow">
@@ -208,16 +211,50 @@ function VariantRow({ variant, count, choices, squadSize, onCount, onChoice }: V
   );
 }
 
-/** Stats for the weapons the current build is actually holding. */
-function WeaponTable({ attacker }: { attacker: Attacker }) {
-  const carried = new Map<string, number>();
+/**
+ * Every weapon on the datasheet, with a stepper for how many models carry it.
+ *
+ * The variant builder above can only offer what the source records, and for
+ * most single-model datasheets it records nothing — which is why a Redemptor
+ * arrives holding both of its main guns. This is the direct control: set what
+ * is actually on the model.
+ *
+ * Characteristics show what the modifiers make them, with anything that moved
+ * marked, so a 3+ that has become a 4+ under cover is visible rather than
+ * something you have to work out.
+ */
+function WeaponTable({
+  attacker,
+  modifiers,
+  onChange,
+}: {
+  attacker: Attacker;
+  modifiers: Modifiers;
+  onChange: (next: Attacker) => void;
+}) {
+  const built = new Map<string, number>();
   for (const entry of loadoutEntries(attacker.unit, attacker.loadout)) {
-    carried.set(entry.weapon.name, (carried.get(entry.weapon.name) ?? 0) + entry.models);
+    const key = weaponKey(entry.weapon.name);
+    built.set(key, (built.get(key) ?? 0) + entry.models);
   }
 
-  const rows = (attacker.unit.weapons ?? []).filter(
-    (w) => carried.has(w.name) || carried.has(baseName(w.name))
-  );
+  // One row per weapon, firing modes folded together — they are one gun.
+  const seen = new Set<string>();
+  const rows = (attacker.unit.weapons ?? []).filter((w) => {
+    const key = weaponKey(w.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const countOfWeapon = (name: string) =>
+    attacker.weapons[weaponKey(name)] ?? built.get(weaponKey(name)) ?? 0;
+
+  const setWeapon = (name: string, n: number) =>
+    onChange({
+      ...attacker,
+      weapons: { ...attacker.weapons, [weaponKey(name)]: Math.max(0, n) },
+    });
 
   return (
     <table className="wtable">
@@ -227,7 +264,7 @@ function WeaponTable({ attacker }: { attacker: Attacker }) {
           <th>Weapon</th>
           <th>Rng</th>
           <th>A</th>
-          <th>Sk</th>
+          <th>BS/WS</th>
           <th>S</th>
           <th>AP</th>
           <th>D</th>
@@ -235,34 +272,56 @@ function WeaponTable({ attacker }: { attacker: Attacker }) {
         </tr>
       </thead>
       <tbody>
-        {rows.length ? (
-          rows.map((w) => (
-            <tr key={w.name}>
+        {rows.map((w) => {
+          const n = countOfWeapon(w.name);
+          const p = shownProfile(w, modifiers);
+          return (
+            <tr key={w.name} className={n === 0 ? 'zero' : ''}>
               <td>
-                <span className="mcount">{carried.get(w.name) ?? carried.get(baseName(w.name))}</span>
+                <span className="qty">
+                  <button
+                    type="button"
+                    aria-label={`Fewer ${w.name}`}
+                    disabled={n <= 0}
+                    onClick={() => setWeapon(w.name, n - 1)}
+                  >
+                    −
+                  </button>
+                  <span className="n">{n}</span>
+                  <button
+                    type="button"
+                    aria-label={`More ${w.name}`}
+                    onClick={() => setWeapon(w.name, n + 1)}
+                  >
+                    +
+                  </button>
+                </span>
               </td>
               <td>
                 {w.kind === 'melee' ? '⚔ ' : ''}
-                {w.name}
+                {weaponKey(w.name)}
               </td>
               <td>{w.range ?? (w.kind === 'melee' ? 'Melee' : '—')}</td>
-              <td>{w.attacks ?? '—'}</td>
-              <td>{w.skill ?? 'N/A'}</td>
-              <td>{w.strength ?? '—'}</td>
-              <td>{w.ap ?? '0'}</td>
-              <td>{w.damage ?? '—'}</td>
+              <Stat shown={p.attacks} />
+              <Stat shown={p.skill} />
+              <Stat shown={p.strength} />
+              <Stat shown={p.ap} />
+              <Stat shown={p.damage} />
               <td className="kw">{(w.keywords ?? []).join(', ') || '—'}</td>
             </tr>
-          ))
-        ) : (
-          <tr>
-            <td colSpan={9} className="kw">
-              No models assigned.
-            </td>
-          </tr>
-        )}
+          );
+        })}
       </tbody>
     </table>
+  );
+}
+
+/** A characteristic, marked when a modifier has moved it. */
+function Stat({ shown }: { shown: Shown }) {
+  return (
+    <td className={shown.changed ? 'modded' : undefined} title={shown.changed ? `printed ${shown.printed}` : undefined}>
+      {shown.value}
+    </td>
   );
 }
 
@@ -291,10 +350,6 @@ function Caveats({ attacker }: { attacker: Attacker }) {
       ))}
     </div>
   );
-}
-
-function baseName(name: string): string {
-  return name.replace(/\s+-\s+[^-]*$/, '').trim();
 }
 
 function countOf(loadout: Loadout, variant: string): number {

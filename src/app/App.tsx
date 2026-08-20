@@ -512,6 +512,7 @@ export default function App() {
                   attacker={attacker}
                   detachment={detachment}
                   leaders={leadersFor(attacker, factions)}
+                  modifiers={modifiers}
                   onChange={(next) =>
                     setAttackers((current) =>
                       current.map((a) => (a.id === next.id ? next : a))

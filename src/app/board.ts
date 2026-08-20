@@ -30,6 +30,7 @@ import {
   loadoutSize,
   validateLoadout,
 } from '../engine/wargear';
+import type { LoadoutEntry } from '../engine/resolve';
 import type { Faction } from './data';
 
 export type WeaponScope = 'all' | 'ranged' | 'melee';
@@ -44,6 +45,16 @@ export interface Attacker {
   leader: DataUnit | null;
   /** Self-buff and detachment rules the player has switched on. */
   enabled: string[];
+  /**
+   * How many models carry each weapon, keyed by weapon name.
+   *
+   * The variant builder can only express what the source records, and for most
+   * single-model datasheets it records nothing — a Redemptor ends up holding
+   * both of its main guns because BSData never says they are alternatives. So
+   * every weapon also gets a direct count, which wins wherever it is set. The
+   * player knows what is on the model; the data often does not.
+   */
+  weapons: Record<string, number>;
 }
 
 export interface TargetEntry {
@@ -83,7 +94,15 @@ export function pointsFor(unit: DataUnit, models: number): number {
 }
 
 export function makeAttacker(unit: DataUnit, faction: Faction, id: string): Attacker {
-  return { id, unit, faction, loadout: defaultLoadout(unit), leader: null, enabled: [] };
+  return {
+    id,
+    unit,
+    faction,
+    loadout: defaultLoadout(unit),
+    leader: null,
+    enabled: [],
+    weapons: {},
+  };
 }
 
 export function makeTarget(unit: DataUnit, faction: Faction, id: string): TargetEntry | null {
@@ -130,10 +149,13 @@ export function attackerContext(
   // firing mode. Every mode is kept here and narrowed per target below: krak
   // or frag, standard or supercharge, is decided when the trigger is pulled,
   // and a leader's plasma pistol deserves that choice as much as the squad's.
-  const entries = [
-    ...loadoutEntries(attacker.unit, attacker.loadout, kind, true),
-    ...(leader ? loadoutEntries(leader, defaultLoadout(leader), kind, true) : []),
-  ];
+  const entries = applyWeaponCounts(
+    [
+      ...loadoutEntries(attacker.unit, attacker.loadout, kind, true),
+      ...(leader ? loadoutEntries(leader, defaultLoadout(leader), kind, true) : []),
+    ],
+    attacker
+  );
 
   const self = readSelfBuffs(attacker.unit);
   let buffs: ConditionalBuff[];
@@ -180,10 +202,38 @@ export function attackerContext(
   };
 }
 
+
+/**
+ * Apply the player's per-weapon counts over whatever the wargear tree produced.
+ *
+ * A weapon set to zero drops out entirely, which is how you take the second
+ * main gun off a Dreadnought. Firing modes share one count, since they are one
+ * weapon fired one way or the other.
+ */
+function applyWeaponCounts(entries: LoadoutEntry[], attacker: Attacker): LoadoutEntry[] {
+  const counts = attacker.weapons;
+  if (!Object.keys(counts).length) return entries;
+
+  return entries
+    .map((entry) => {
+      const override = counts[weaponKey(entry.weapon.name)];
+      return override === undefined ? entry : { ...entry, models: override };
+    })
+    .filter((entry) => entry.models > 0);
+}
+
+/** "Cyclone missile launcher - krak" and "- frag" are one weapon. */
+export function weaponKey(name: string): string {
+  return name.replace(/\s+-\s+[^-]*$/, '').trim();
+}
+
 /** What the unit is actually holding, as counts of each weapon. */
 export function loadoutLabel(attacker: Attacker): string {
   const counts = new Map<string, number>();
-  for (const entry of loadoutEntries(attacker.unit, attacker.loadout)) {
+  for (const entry of applyWeaponCounts(
+    loadoutEntries(attacker.unit, attacker.loadout),
+    attacker
+  )) {
     if (/close combat weapon/i.test(entry.weapon.name)) continue;
     // The firing mode is a per-target decision, not part of the build.
     const name = entry.weapon.name.replace(/\s+-\s+[^-]*$/, '').trim();
@@ -210,6 +260,13 @@ export function computeCell(
       ...e,
       modifiers: {
         ...modifiers,
+        // Melee-only attack bonuses land on melee weapons and nowhere else.
+        ...(e.weapon.melee
+          ? {
+              attacksModifier:
+                (modifiers.attacksModifier ?? 0) + (modifiers.meleeAttacksModifier ?? 0),
+            }
+          : {}),
         ...(e.weapon.melee ? melee.modifiers : ranged.modifiers),
         ...e.modifiers,
       } as Modifiers,

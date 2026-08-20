@@ -280,6 +280,12 @@
   .bpicks { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .bpick { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); }
   .bpick select { font-size: 12px; }
+  /* A characteristic the modifiers have moved. Violet because nothing else in
+     the palette is anywhere near it — the eye finds it without hunting. */
+  .wtable td.modded { color: #b98cff; font-weight: 500; }
+  .wtable tr.zero td { color: var(--ink-3); }
+  .wtable tr.zero td.modded { color: #7c5aa8; }
+  .wtable td .qty { transform: scale(.92); transform-origin: left center; }
   .mcount { display: inline-block; min-width: 20px; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums; }
   .caveats { margin-top: 12px; border-left: 2px solid var(--bronze-dim); padding: 2px 0 2px 11px; display: flex; flex-direction: column; gap: 6px; }
   .caveats div { font-size: 12px; color: var(--ink-2); line-height: 1.45; }

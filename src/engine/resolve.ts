@@ -157,6 +157,13 @@ export interface Modifiers {
 
   // --- attacker characteristics, uncapped --------------------------------
   attacksModifier?: number;
+  /**
+   * Added to Attacks on melee weapons only. Most attack bonuses in the game
+   * are melee-only -- a charge, a Waaagh!, The Red Thirst -- and applying them
+   * to a squad's bolters as well would flatter every gunline that ever fixed
+   * bayonets.
+   */
+  meleeAttacksModifier?: number;
   strengthModifier?: number;
   /** Improves AP: +1 turns AP-1 into AP-2. */
   apModifier?: number;

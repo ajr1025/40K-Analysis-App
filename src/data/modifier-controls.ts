@@ -151,6 +151,16 @@ export const MODIFIER_CONTROLS: ModifierControl[] = [
   },
   {
     kind: 'stepper',
+    field: 'meleeAttacksModifier',
+    label: 'Attacks (melee only)',
+    group: 'attacker-profile',
+    min: 0,
+    max: 4,
+    default: 0,
+    hint: 'Most attack bonuses are melee-only — a charge, a Waaagh!, The Red Thirst.',
+  },
+  {
+    kind: 'stepper',
     field: 'strengthModifier',
     label: 'Strength',
     group: 'attacker-profile',
