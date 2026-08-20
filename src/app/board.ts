@@ -247,6 +247,45 @@ export function loadoutLabel(attacker: Attacker): string {
     .join(', ');
 }
 
+
+const REROLL_RANK = { none: 0, ones: 1, failures: 2, fishing: 3 } as const;
+
+/**
+ * Combine the player's modifiers with the ones the unit's own rules supply.
+ *
+ * Spreading one over the other let whichever came last win, which quietly
+ * discarded the player's choice: an Eradicator squad already re-rolling
+ * against vehicles ignored every re-roll setting in the drawer, because its
+ * own ability landed on top. Rule 24.02 says duplicated abilities are not
+ * cumulative and the player picks which applies, so the stronger of the two
+ * is taken rather than the later one.
+ */
+function mergeModifiers(
+  player: Modifiers,
+  fromRules: Partial<Modifiers>,
+  melee: boolean,
+  perWeapon: Modifiers | undefined
+): Modifiers {
+  const out: Modifiers = { ...player, ...fromRules };
+
+  for (const field of ['rerollHits', 'rerollWounds'] as const) {
+    const a = player[field];
+    const b = fromRules[field];
+    if (a && b) out[field] = REROLL_RANK[a] >= REROLL_RANK[b] ? a : b;
+    else out[field] = a ?? b;
+  }
+
+  // Melee-only attack bonuses land on melee weapons and nowhere else.
+  if (melee) {
+    out.attacksModifier =
+      (player.attacksModifier ?? 0) +
+      (player.meleeAttacksModifier ?? 0) +
+      (fromRules.attacksModifier ?? 0);
+  }
+
+  return { ...out, ...perWeapon };
+}
+
 export function computeCell(
   context: AttackerContext,
   entry: TargetEntry,
@@ -258,18 +297,12 @@ export function computeCell(
   const perEntry = chooseModes(
     context.entries.map((e) => ({
       ...e,
-      modifiers: {
-        ...modifiers,
-        // Melee-only attack bonuses land on melee weapons and nowhere else.
-        ...(e.weapon.melee
-          ? {
-              attacksModifier:
-                (modifiers.attacksModifier ?? 0) + (modifiers.meleeAttacksModifier ?? 0),
-            }
-          : {}),
-        ...(e.weapon.melee ? melee.modifiers : ranged.modifiers),
-        ...e.modifiers,
-      } as Modifiers,
+      modifiers: mergeModifiers(
+        modifiers,
+        e.weapon.melee ? melee.modifiers : ranged.modifiers,
+        e.weapon.melee === true,
+        e.modifiers
+      ),
     })),
     entry.target,
     modifiers
