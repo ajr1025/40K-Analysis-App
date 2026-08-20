@@ -260,7 +260,7 @@ const REROLL_RANK = { none: 0, ones: 1, failures: 2, fishing: 3 } as const;
  * cumulative and the player picks which applies, so the stronger of the two
  * is taken rather than the later one.
  */
-function mergeModifiers(
+export function mergeModifiers(
   player: Modifiers,
   fromRules: Partial<Modifiers>,
   melee: boolean,

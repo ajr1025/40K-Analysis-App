@@ -20,8 +20,10 @@ import {
   variantsOf,
 } from '../engine/wargear';
 import { optionalRules } from '../engine/detachments';
+import type { ConditionalBuff } from '../engine/conditions';
 import type { Modifiers } from '../engine/resolve';
-import { type Attacker, attackerContext, unitBuffs, weaponKey } from './board';
+import { resolveBuffs } from '../engine/conditions';
+import { type Attacker, attackerContext, mergeModifiers, unitBuffs, weaponKey } from './board';
 import { type Shown, shownProfile } from './profile';
 
 interface Props {
@@ -29,14 +31,22 @@ interface Props {
   detachment: Detachment | null;
   leaders: DataUnit[];
   modifiers: Modifiers;
+  armyRule: ConditionalBuff | null;
   onChange: (next: Attacker) => void;
 }
 
-export function LoadoutPanel({ attacker, detachment, leaders, modifiers, onChange }: Props) {
+export function LoadoutPanel({
+  attacker,
+  detachment,
+  leaders,
+  modifiers,
+  armyRule,
+  onChange,
+}: Props) {
   const variants = variantsOf(attacker.unit);
   const size = loadoutSize(attacker.loadout);
   const problems = validateLoadout(attacker.unit, attacker.loadout);
-  const context = attackerContext(attacker, detachment, 'all');
+  const context = attackerContext(attacker, detachment, 'all', armyRule);
   const { optional } = unitBuffs(attacker);
   const detachmentRules = optionalRules(detachment);
 
@@ -89,7 +99,12 @@ export function LoadoutPanel({ attacker, detachment, leaders, modifiers, onChang
         </div>
       </div>
 
-      <WeaponTable attacker={attacker} modifiers={modifiers} onChange={onChange} />
+      <WeaponTable
+        attacker={attacker}
+        modifiers={modifiers}
+        buffs={context.buffs}
+        onChange={onChange}
+      />
 
       {leaders.length ? (
         <div className="leadrow">
@@ -226,12 +241,31 @@ function VariantRow({ variant, count, choices, squadSize, onCount, onChoice }: V
 function WeaponTable({
   attacker,
   modifiers,
+  buffs,
   onChange,
 }: {
   attacker: Attacker;
   modifiers: Modifiers;
+  buffs: ConditionalBuff[];
   onChange: (next: Attacker) => void;
 }) {
+  /*
+   * Buffs that depend on the target are left out here, because this table is
+   * not looking at one: Anti-X and "against Monsters and Vehicles" abilities
+   * vary column by column, and the cell marks them with a diamond instead.
+   * What remains is everything true of the unit wherever it shoots — a
+   * detachment rule, an ability the player has switched on, a leader.
+   */
+  const unconditional = buffs.filter((b) => !b.requiresTargetKeyword.length);
+  const forKind = (melee: boolean) =>
+    mergeModifiers(
+      modifiers,
+      resolveBuffs(unconditional, undefined, melee ? 'melee' : 'ranged').modifiers,
+      melee,
+      undefined
+    );
+  const meleeModifiers = forKind(true);
+  const rangedModifiers = forKind(false);
   const built = new Map<string, number>();
   for (const entry of loadoutEntries(attacker.unit, attacker.loadout)) {
     const key = weaponKey(entry.weapon.name);
@@ -274,7 +308,7 @@ function WeaponTable({
       <tbody>
         {rows.map((w) => {
           const n = countOfWeapon(w.name);
-          const p = shownProfile(w, modifiers);
+          const p = shownProfile(w, w.kind === 'melee' ? meleeModifiers : rangedModifiers);
           return (
             <tr key={w.name} className={n === 0 ? 'zero' : ''}>
               <td>

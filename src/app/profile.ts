@@ -48,17 +48,16 @@ const cap = (n: number) => Math.max(-1, Math.min(1, n));
 
 export function shownProfile(
   weapon: DataWeapon,
-  modifiers: Modifiers,
-  extra: Partial<Modifiers> = {}
+  modifiers: Modifiers
 ): { attacks: Shown; skill: Shown; strength: Shown; ap: Shown; damage: Shown } {
-  const m = { ...modifiers, ...extra };
+  const m = modifiers;
   const melee = weapon.kind === 'melee';
   const keywords = (weapon.keywords ?? []).map((k) => k.toLowerCase());
   const has = (needle: string) => keywords.some((k) => k.startsWith(needle));
 
   // --- attacks: Rapid Fire and Blast are situational, so only the flat
   // modifier is shown here; the cell resolves the rest against a real target.
-  const attacksBonus = (m.attacksModifier ?? 0) + (melee ? m.meleeAttacksModifier ?? 0 : 0);
+  const attacksBonus = m.attacksModifier ?? 0;
   const rapid = /rapid fire\s*(\d+)/i.exec((weapon.keywords ?? []).join(' '));
   const rapidBonus = m.halfRange && rapid ? Number(rapid[1]) : 0;
   const attacks = numeric(weapon.attacks, attacksBonus + rapidBonus);
