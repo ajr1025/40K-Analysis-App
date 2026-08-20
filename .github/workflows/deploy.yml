@@ -30,7 +30,22 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm test
+
+      # Failures are written into the job summary, which is readable on a
+      # public repo without admin rights -- downloading the raw log is not.
+      - name: Test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/test.log || {
+            {
+              echo '### Test failure'
+              echo '```'
+              tail -120 /tmp/test.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
