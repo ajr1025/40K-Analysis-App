@@ -514,6 +514,7 @@ export default function App() {
                   leaders={leadersFor(attacker, factions)}
                   modifiers={modifiers}
                   armyRule={armyRuleBuff}
+                  target={detail?.target}
                   onChange={(next) =>
                     setAttackers((current) =>
                       current.map((a) => (a.id === next.id ? next : a))

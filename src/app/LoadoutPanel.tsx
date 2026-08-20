@@ -23,7 +23,7 @@ import { optionalRules } from '../engine/detachments';
 import type { ConditionalBuff } from '../engine/conditions';
 import type { Modifiers } from '../engine/resolve';
 import { resolveBuffs } from '../engine/conditions';
-import { type Attacker, attackerContext, mergeModifiers, unitBuffs, weaponKey } from './board';
+import { type Attacker, type TargetEntry, attackerContext, unitBuffs, weaponKey } from './board';
 import { type Shown, shownProfile } from './profile';
 
 interface Props {
@@ -32,6 +32,8 @@ interface Props {
   leaders: DataUnit[];
   modifiers: Modifiers;
   armyRule: ConditionalBuff | null;
+  /** The target of the selected cell, when one is selected. */
+  target?: TargetEntry;
   onChange: (next: Attacker) => void;
 }
 
@@ -41,6 +43,7 @@ export function LoadoutPanel({
   leaders,
   modifiers,
   armyRule,
+  target,
   onChange,
 }: Props) {
   const variants = variantsOf(attacker.unit);
@@ -103,6 +106,7 @@ export function LoadoutPanel({
         attacker={attacker}
         modifiers={modifiers}
         buffs={context.buffs}
+        target={target}
         onChange={onChange}
       />
 
@@ -242,11 +246,13 @@ function WeaponTable({
   attacker,
   modifiers,
   buffs,
+  target,
   onChange,
 }: {
   attacker: Attacker;
   modifiers: Modifiers;
   buffs: ConditionalBuff[];
+  target?: TargetEntry;
   onChange: (next: Attacker) => void;
 }) {
   /*
@@ -256,16 +262,13 @@ function WeaponTable({
    * What remains is everything true of the unit wherever it shoots — a
    * detachment rule, an ability the player has switched on, a leader.
    */
-  const unconditional = buffs.filter((b) => !b.requiresTargetKeyword.length);
+  const applicable = target
+    ? buffs
+    : buffs.filter((b) => !b.requiresTargetKeyword.length);
   const forKind = (melee: boolean) =>
-    mergeModifiers(
-      modifiers,
-      resolveBuffs(unconditional, undefined, melee ? 'melee' : 'ranged').modifiers,
-      melee,
-      undefined
-    );
-  const meleeModifiers = forKind(true);
-  const rangedModifiers = forKind(false);
+    resolveBuffs(applicable, target?.target.keywords, melee ? 'melee' : 'ranged').applied;
+  const meleeBuffs = forKind(true);
+  const rangedBuffs = forKind(false);
   const built = new Map<string, number>();
   for (const entry of loadoutEntries(attacker.unit, attacker.loadout)) {
     const key = weaponKey(entry.weapon.name);
@@ -308,7 +311,8 @@ function WeaponTable({
       <tbody>
         {rows.map((w) => {
           const n = countOfWeapon(w.name);
-          const p = shownProfile(w, w.kind === 'melee' ? meleeModifiers : rangedModifiers);
+          const melee = w.kind === 'melee';
+          const p = shownProfile(w, modifiers, melee ? meleeBuffs : rangedBuffs, target);
           return (
             <tr key={w.name} className={n === 0 ? 'zero' : ''}>
               <td>
@@ -352,11 +356,12 @@ function WeaponTable({
 
 /** A characteristic, marked when a modifier has moved it. */
 function Stat({ shown }: { shown: Shown }) {
-  const title = shown.reason
-    ? `${shown.reason} (printed ${shown.printed})`
-    : shown.changed
-      ? `printed ${shown.printed}`
-      : undefined;
+  // Printed value first, then a line per thing acting on it.
+  // Shown even when the modifiers cancel out -- a +1 and a cover penalty leave
+  // the number alone, and without this it would look like neither applied.
+  const title = shown.reasons.length
+    ? [`Printed ${shown.printed}`, ...shown.reasons].join('\n')
+    : undefined;
 
   // Where the modifier adds to a roll, only the addition is marked -- the
   // die is still the die.
