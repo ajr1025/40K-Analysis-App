@@ -28,7 +28,8 @@ export interface BoardState {
   scope: WeaponScope;
   armyRule: string | null;
   detachment: string | null;
-  toughness: number[];
+  /** Kept so links made before bands replaced filtering still decode. */
+  toughness?: number[];
 }
 
 export function encodeBoard(
@@ -37,8 +38,7 @@ export function encodeBoard(
   modifiers: Modifiers,
   scope: WeaponScope,
   armyRule: string | null,
-  detachment: string | null,
-  toughness: number[]
+  detachment: string | null
 ): string {
   const state: BoardState = {
     attackers: attackers.map((a) => ({
@@ -55,7 +55,6 @@ export function encodeBoard(
     scope,
     armyRule,
     detachment,
-    toughness,
   };
 
   return compress(JSON.stringify(state));

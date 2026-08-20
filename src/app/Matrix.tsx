@@ -31,7 +31,6 @@ interface Props {
   scope: WeaponScope;
   detachment: Detachment | null;
   armyRule: ConditionalBuff | null;
-  visible: (target: TargetEntry) => boolean;
   selected: { row: number; col: number } | null;
   onSelect: (row: number, col: number) => void;
   onRemove: (id: string) => void;
@@ -47,7 +46,6 @@ export function Matrix({
   scope,
   detachment,
   armyRule,
-  visible,
   selected,
   onSelect,
   onRemove,
@@ -55,7 +53,7 @@ export function Matrix({
   onToggleExpand,
   renderPanel,
 }: Props) {
-  const shown = targets.filter(visible);
+  const shown = targets;
 
   return (
     <div className="matrix-shell">

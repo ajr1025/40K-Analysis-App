@@ -63,7 +63,6 @@ export default function App() {
   const [targets, setTargets] = useState<TargetEntry[]>([]);
   const [modifiers, setModifiers] = useState<Modifiers>(startingModifiers);
   const [scope, setScope] = useState<WeaponScope>('all');
-  const [toughness, setToughness] = useState<number[]>([]);
   const [armyRule, setArmyRule] = useState<string | null>(null);
   const [detachmentName, setDetachmentName] = useState<string | null>(null);
   const [factions, setFactions] = useState<Faction[]>([]);
@@ -141,10 +140,6 @@ export default function App() {
     [rememberFaction]
   );
 
-  const addAllYardsticks = useCallback(async () => {
-    for (const spec of BENCHMARK_TARGETS) await addYardstick(spec);
-  }, [addYardstick]);
-
   // --- army rules and detachments come from the factions on the board ------
   const armyRules = useMemo(() => {
     const units = factions.flatMap((f) => f.units.map((u) => ({ ...u, faction: f.name })));
@@ -189,13 +184,12 @@ export default function App() {
       scope,
       armyRule,
       detachmentName,
-      toughness
     );
     const next = attackers.length || targets.length ? `#${encoded}` : '';
     if (window.location.hash !== next) {
       window.history.replaceState(null, '', `${window.location.pathname}${next}`);
     }
-  }, [restored, attackers, targets, modifiers, scope, armyRule, detachmentName, toughness]);
+  }, [restored, attackers, targets, modifiers, scope, armyRule, detachmentName]);
 
   // Restore a shared board once the search index is available.
   useEffect(() => {
@@ -249,7 +243,6 @@ export default function App() {
       setScope(state.scope ?? 'all');
       setArmyRule(state.armyRule ?? null);
       setDetachmentName(state.detachment ?? null);
-      setToughness(state.toughness ?? []);
       setRestored(true);
     })();
 
@@ -260,18 +253,48 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index.length > 0]);
 
+  /**
+   * The yardsticks, grouped by toughness.
+   *
+   * Toughness is the axis you actually think along — "what handles T10?" — so
+   * the bands are how the standard targets get onto the board, rather than a
+   * separate list of names to pick through. Counts come from the search index,
+   * which is already loaded, so no faction file is fetched to draw this.
+   */
   const bands = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const t of targets) counts.set(t.target.toughness, (counts.get(t.target.toughness) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => a[0] - b[0]);
-  }, [targets]);
+    const byName = new Map(index.map((e) => [`${e.slug}:${e.name}`, e]));
+    const groups = new Map<number, typeof BENCHMARK_TARGETS>();
+    for (const spec of BENCHMARK_TARGETS) {
+      const entry = byName.get(`${spec.faction}:${spec.unit}`);
+      const t = Number(entry?.toughness);
+      if (!Number.isFinite(t)) continue;
+      if (!groups.has(t)) groups.set(t, []);
+      groups.get(t)!.push(spec);
+    }
+    return [...groups.entries()].sort((a, b) => a[0] - b[0]);
+  }, [index]);
 
-  const visible = useCallback(
-    (t: TargetEntry) => toughness.length === 0 || toughness.includes(t.target.toughness),
-    [toughness]
+  const onBoard = useCallback(
+    (spec: { unit: string }) => targets.some((t) => t.unit.name === spec.unit),
+    [targets]
   );
 
-  const shownTargets = targets.filter(visible);
+  /** A band is on when every yardstick in it is on the board. */
+  const toggleBand = useCallback(
+    async (specs: typeof BENCHMARK_TARGETS) => {
+      const names = new Set(specs.map((s) => s.unit));
+      if (specs.every(onBoard)) {
+        setTargets((current) => current.filter((t) => !names.has(t.unit.name)));
+        return;
+      }
+      for (const spec of specs) await addYardstick(spec);
+    },
+    [addYardstick, onBoard]
+  );
+
+  // Turning a toughness band off removes its targets, so there is nothing
+  // further to filter -- what is on the board is what you see.
+  const shownTargets = targets;
   const detail =
     selected && attackers[selected.row] && shownTargets[selected.col]
       ? {
@@ -400,34 +423,7 @@ export default function App() {
             index={index}
             already={(name) => targets.some((t) => t.unit.name === name)}
             onPick={addTarget}
-          >
-            <div className="yardsticks">
-              <div className="ylabel">
-                <span className="label">Yardsticks</span>
-                <button type="button" className="yall" onClick={() => void addAllYardsticks()}>
-                  Add all {BENCHMARK_TARGETS.length}
-                </button>
-              </div>
-              <div className="ychips">
-                {BENCHMARK_TARGETS.map((spec) => {
-                  const name = spec.label ?? spec.unit;
-                  const on = targets.some((t) => t.unit.name === spec.unit);
-                  return (
-                    <button
-                      key={`${spec.faction}:${spec.unit}`}
-                      type="button"
-                      className="ychip"
-                      aria-pressed={on}
-                      disabled={on}
-                      onClick={() => void addYardstick(spec)}
-                    >
-                      {name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </SearchZone>
+          />
         </div>
 
         {bands.length ? (
@@ -438,26 +434,21 @@ export default function App() {
             <button
               type="button"
               className="tchip"
-              aria-pressed={toughness.length === 0}
-              onClick={() => setToughness([])}
+              aria-pressed={BENCHMARK_TARGETS.every(onBoard)}
+              onClick={() => void toggleBand(BENCHMARK_TARGETS)}
             >
-              All <i>{targets.length}</i>
+              All <i>{BENCHMARK_TARGETS.length}</i>
             </button>
-            {bands.map(([band, count]) => (
+            {bands.map(([band, specs]) => (
               <button
                 key={band}
                 type="button"
                 className="tchip"
-                aria-pressed={toughness.includes(band)}
-                onClick={() =>
-                  setToughness((current) =>
-                    current.includes(band)
-                      ? current.filter((t) => t !== band)
-                      : [...current, band]
-                  )
-                }
+                aria-pressed={specs.every(onBoard)}
+                title={specs.map((sp) => sp.label ?? sp.unit).join(', ')}
+                onClick={() => void toggleBand(specs)}
               >
-                T{band} <i>{count}</i>
+                T{band} <i>×{specs.length}</i>
               </button>
             ))}
           </div>
@@ -508,7 +499,6 @@ export default function App() {
               scope={scope}
               detachment={detachment}
               armyRule={armyRuleBuff}
-              visible={visible}
               selected={selected}
               onSelect={(row, col) => setSelected({ row, col })}
               onRemove={(id) => {
