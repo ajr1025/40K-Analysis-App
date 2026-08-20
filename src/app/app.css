@@ -184,7 +184,11 @@
   .stepper b + b { border-left: 1px solid var(--rule); }
 
   /* ---------- board ---------- */
-  .board { display: grid; grid-template-columns: minmax(0, 1fr) 288px; gap: 18px; margin-top: 18px; align-items: start; }
+  /* The rail only takes a column when there is a rail. Reserving it while
+     nothing is selected left the matrix squeezed into part of the width with
+     288px of empty page beside it. */
+  .board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 18px; align-items: start; }
+  .board.with-rail { grid-template-columns: minmax(0, 1fr) 288px; }
   .matrix-shell { background: var(--page); border: 1px solid var(--rule); border-radius: var(--r); overflow: auto; max-height: 74vh; }
 
   table { border-collapse: separate; border-spacing: 0; width: 100%; }
@@ -368,7 +372,7 @@
   .mcard .e { font-family: var(--serif); font-size: 20px; font-variant-numeric: tabular-nums; }
 
   @media (max-width: 940px) {
-    .board { grid-template-columns: minmax(0, 1fr); }
+    .board, .board.with-rail { grid-template-columns: minmax(0, 1fr); }
     .rail { position: static; }
     .zones { grid-template-columns: 1fr; }
     .zone + .zone { border-left: 0; border-top: 1px solid var(--rule-soft); }

@@ -466,7 +466,7 @@ export default function App() {
         </div>
       ) : null}
 
-      <div className="board">
+      <div className={`board${detail ? ' with-rail' : ''}`}>
         <div>
           {view === 'ranked' && !empty ? (
             <Ranked
