@@ -304,10 +304,10 @@ export const MODIFIER_CONTROLS: ModifierControl[] = [
     field: 'targetModels',
     label: 'Target unit size',
     group: 'defender',
-    min: 1,
+    min: 0,
     max: 20,
-    default: 1,
-    hint: 'Also drives Blast, which adds an attack per five models.',
+    default: 0,
+    hint: 'Zero means the size printed on the datasheet. Also drives Blast, which adds an attack per five models.',
   },
 ];
 
@@ -357,9 +357,36 @@ export const MODIFIER_PRESETS: Array<{
 ];
 
 /** Everything at its default, as the starting state for the panel. */
+/**
+ * Fields that override something the target already has.
+ *
+ * These need a third state beyond their range: "leave the datasheet alone".
+ * The engine reads a present key as an override -- `feelNoPain: null` means
+ * *no* Feel No Pain, not *use the printed one* -- so an unset control has to
+ * be absent from the object entirely rather than sitting at a default value.
+ *
+ * Left in, the defaults quietly stripped every target's invulnerable save and
+ * Feel No Pain, erased damage reduction, and resolved every multi-model unit
+ * as a single model.
+ */
+export const TARGET_OVERRIDES = new Set<keyof Modifiers>([
+  'targetModels',
+  'feelNoPain',
+  'invulnerable',
+  'damageReduction',
+]);
+
+/** True when a control is sitting at "leave the datasheet alone". */
+export function isUnset(field: keyof Modifiers, value: unknown): boolean {
+  if (!TARGET_OVERRIDES.has(field)) return false;
+  return value == null || value === 0;
+}
+
 export function defaultModifiers(): Modifiers {
   const out: Record<string, unknown> = {};
   for (const control of MODIFIER_CONTROLS) {
+    // An unset override must be absent, not defaulted -- see TARGET_OVERRIDES.
+    if (isUnset(control.field, control.default)) continue;
     out[control.field] = control.default;
   }
   return out as Modifiers;

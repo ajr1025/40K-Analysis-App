@@ -111,3 +111,51 @@ describe('modifier controls', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('unset overrides never reach the engine', () => {
+  // The highest-impact bug the app has had: the modifier defaults were spread
+  // into every resolve, and four of them override a characteristic the target
+  // already has. Every multi-model unit resolved as a single model, and every
+  // invulnerable save, Feel No Pain and damage reduction was erased -- while
+  // 297 engine tests passed, because they hand the engine explicit targets and
+  // never go through the app's defaults.
+
+  it('omits target overrides rather than defaulting them', () => {
+    const defaults = defaultModifiers() as Record<string, unknown>;
+    for (const field of ['targetModels', 'feelNoPain', 'invulnerable', 'damageReduction']) {
+      expect(`${field}: ${field in defaults}`).toBe(`${field}: false`);
+    }
+  });
+
+  it("leaves a target's own defences intact under the defaults", () => {
+    const weapon: Weapon = {
+      name: 'w', attacks: '10', skill: 3, strength: 8, ap: 0, damage: '1',
+    };
+    const target: Target = {
+      name: 't', toughness: 4, save: 3, invulnerable: 4, wounds: 1, models: 10,
+      feelNoPain: 5, damageReduction: 1,
+    };
+
+    const withDefaults = resolveAttack(weapon, target, defaultModifiers())!;
+    const bare = resolveAttack(weapon, target, {})!;
+
+    expect(withDefaults.expectedModelsSlain).toBeCloseTo(bare.expectedModelsSlain, 9);
+    // And the unit is genuinely ten models, not one.
+    expect(bare.expectedModelsSlain).toBeGreaterThan(1);
+    expect(withDefaults.expectedModelsSlain).toBeGreaterThan(1);
+  });
+
+  it('still applies an override the player actually sets', () => {
+    const weapon: Weapon = {
+      name: 'w', attacks: '10', skill: 3, strength: 8, ap: 0, damage: '1',
+    };
+    const target: Target = {
+      name: 't', toughness: 4, save: 7, wounds: 1, models: 10,
+    };
+    const capped = resolveAttack(weapon, target, {
+      ...defaultModifiers(),
+      targetModels: 2,
+    })!;
+    expect(capped.expectedModelsSlain).toBeLessThanOrEqual(2);
+  });
+});

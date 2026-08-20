@@ -315,6 +315,20 @@
   .empty p { margin: 0 auto 20px; max-width: 410px; font-size: 13.5px; color: var(--ink-3); line-height: 1.55; }
 
   /* ---------- phone ---------- */
+  /* ---------- distribution chart ---------- */
+  .dist { margin: 16px 0 0; }
+  .dist figcaption { font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px; }
+  .dist svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .dist-tick { fill: var(--ink-3); font-size: 8px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+  .dist-label { fill: var(--ink-2); font-size: 8.5px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+  /* The table is the same numbers for anyone the chart does not reach --
+     screen readers, print, forced colours. Available, not in the way. */
+  .dist-table { border-collapse: collapse; font-size: 11.5px; margin-top: 10px; width: 100%; font-variant-numeric: tabular-nums; }
+  .dist-table caption { text-align: left; font-size: 11px; color: var(--ink-3); padding-bottom: 5px; }
+  .dist-table th { text-align: left; font-weight: 400; color: var(--ink-3); border-bottom: 1px solid var(--rule-soft); padding: 3px 8px 3px 0; }
+  .dist-table td { color: var(--ink-2); padding: 2px 8px 2px 0; }
+  @media (max-width: 760px) { .dist-table { display: none; } }
+
   /* ---------- ranked view (narrow screens) ---------- */
   .ranked { background: var(--page); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px 12px 16px; }
   .phone-top { display: flex; gap: 9px; align-items: center; margin-bottom: 14px; }

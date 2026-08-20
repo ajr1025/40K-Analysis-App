@@ -9,6 +9,7 @@
  */
 
 import { type DataUnit, toTarget } from '../engine/adapt';
+import type { Distribution } from '../engine/dice';
 import { type ConditionalBuff, resolveBuffs } from '../engine/conditions';
 import { type Detachment, detachmentBuffs } from '../engine/detachments';
 import { type Attachment, attachedEffects, attachedPoints } from '../engine/attachment';
@@ -66,6 +67,8 @@ export interface Cell {
   applied: string[];
   /** What the unit is holding, as model counts. */
   loadout: string;
+  /** Exact distribution over models slain, for the detail chart. */
+  modelsSlainDistribution: Distribution;
 }
 
 /** Points for a given model count, from the MFM tiers. */
@@ -229,6 +232,7 @@ export function computeCell(
       pointsDestroyed: 0,
       applied: [],
       loadout: context.label,
+      modelsSlainDistribution: new Map(),
     };
   }
 
@@ -240,6 +244,7 @@ export function computeCell(
     pointsDestroyed: pointsDestroyed(result, entry.target, entry.points),
     applied: [...new Set([...melee.applied, ...ranged.applied].map((b) => b.source))],
     loadout: context.label,
+    modelsSlainDistribution: result.modelsSlainDistribution,
   };
 }
 

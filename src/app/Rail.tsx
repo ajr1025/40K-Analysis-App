@@ -8,6 +8,7 @@
  */
 
 import type { Attacker, Cell, TargetEntry } from './board';
+import { DistributionChart } from './Distribution';
 
 interface Props {
   detail: { attacker: Attacker; target: TargetEntry; cell: Cell };
@@ -55,6 +56,14 @@ export function Rail({ detail }: Props) {
             <span className="v">{cell.wipeChance.toFixed(1)}%</span>
           </div>
         </div>
+
+        {cell.modelsSlainDistribution.size ? (
+          <DistributionChart
+            distribution={cell.modelsSlainDistribution}
+            models={target.target.models}
+            expected={cell.modelsSlain}
+          />
+        ) : null}
 
         {cell.damage > target.target.wounds * target.target.models ? (
           <div className="notice">

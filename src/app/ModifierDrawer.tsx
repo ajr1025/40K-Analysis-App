@@ -14,6 +14,7 @@ import {
   CONTROL_GROUPS,
   type ModifierControl,
   MODIFIER_CONTROLS,
+  isUnset,
 } from '../data/modifier-controls';
 
 interface Props {
@@ -23,8 +24,14 @@ interface Props {
 }
 
 export function ModifierDrawer({ modifiers, onChange, detachment }: Props) {
-  const set = (field: keyof Modifiers, value: unknown) =>
-    onChange({ ...modifiers, [field]: value } as Modifiers);
+  const set = (field: keyof Modifiers, value: unknown) => {
+    const next = { ...modifiers } as Record<string, unknown>;
+    // Returning an override to "as printed" removes it, so the target's own
+    // characteristic is used rather than being overwritten with a blank.
+    if (isUnset(field, value)) delete next[field];
+    else next[field] = value;
+    onChange(next as Modifiers);
+  };
 
   return (
     <div className="drawer">
@@ -98,16 +105,19 @@ function Control({ control, value, onChange }: ControlProps) {
   }
 
   if (control.kind === 'choice') {
-    const current = (value as string | null) ?? control.options[0]?.value ?? '';
+    const current = (value as string | number | null | undefined) ?? control.options[0]?.value ?? null;
     return (
       <div className="mrow">
         <span>{control.label}</span>
         <select
-          value={String(current)}
-          onChange={(e) => onChange(e.target.value === 'none' ? undefined : e.target.value)}
+          value={String(current ?? '')}
+          onChange={(e) => {
+            const picked = control.options.find((o) => String(o.value) === e.target.value);
+            onChange(picked ? picked.value : null);
+          }}
         >
           {control.options.map((option) => (
-            <option key={String(option.value)} value={String(option.value)}>
+            <option key={String(option.value)} value={String(option.value ?? '')}>
               {option.label}
             </option>
           ))}
