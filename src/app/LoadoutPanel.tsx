@@ -318,8 +318,25 @@ function WeaponTable({
 
 /** A characteristic, marked when a modifier has moved it. */
 function Stat({ shown }: { shown: Shown }) {
+  const title = shown.reason
+    ? `${shown.reason} (printed ${shown.printed})`
+    : shown.changed
+      ? `printed ${shown.printed}`
+      : undefined;
+
+  // Where the modifier adds to a roll, only the addition is marked -- the
+  // die is still the die.
+  if (shown.bonus) {
+    return (
+      <td title={title}>
+        {shown.base}
+        <span className="modded">{shown.bonus}</span>
+      </td>
+    );
+  }
+
   return (
-    <td className={shown.changed ? 'modded' : undefined} title={shown.changed ? `printed ${shown.printed}` : undefined}>
+    <td className={shown.changed ? 'modded' : undefined} title={title}>
       {shown.value}
     </td>
   );

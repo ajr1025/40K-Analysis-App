@@ -282,7 +282,7 @@
   .bpick select { font-size: 12px; }
   /* A characteristic the modifiers have moved. Violet because nothing else in
      the palette is anywhere near it — the eye finds it without hunting. */
-  .wtable td.modded { color: #b98cff; font-weight: 500; }
+  .wtable td.modded, .wtable .modded { color: #b98cff; font-weight: 500; }
   .wtable tr.zero td { color: var(--ink-3); }
   .wtable tr.zero td.modded { color: #7c5aa8; }
   .wtable td .qty { transform: scale(.92); transform-origin: left center; }

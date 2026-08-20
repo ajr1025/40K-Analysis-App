@@ -20,12 +20,23 @@ export interface Shown {
   changed: boolean;
   /** What the datasheet says, for the tooltip. */
   printed: string;
+  /**
+   * Where a bonus is added to a roll rather than replacing a number, the two
+   * halves are kept apart so the UI can show "D6" plainly and "+2" as the
+   * addition it is. A melta rifle inside half range is not a different weapon;
+   * it is the same weapon with two more damage, and that reads better than a
+   * "D6+2" that gives no clue where the 2 came from.
+   */
+  base?: string;
+  bonus?: string;
+  /** Why the bonus applies, for the tooltip. */
+  reason?: string;
 }
 
 const plain = (value: string): Shown => ({ value, changed: false, printed: value });
 
-function moved(printed: string, value: string): Shown {
-  return { value, changed: value !== printed, printed };
+function moved(printed: string, value: string, parts?: { base: string; bonus: string; reason?: string }): Shown {
+  return { value, changed: value !== printed, printed, ...parts };
 }
 
 /**
@@ -71,7 +82,11 @@ export function shownProfile(
   const ap = moved(printedAp, apMagnitude === 0 ? '0' : `-${apMagnitude}`);
 
   const meltaBonus = m.halfRange ? meltaValue(weapon) : 0;
-  const damage = numeric(weapon.damage, (m.damageModifier ?? 0) + meltaBonus);
+  const damage = numeric(
+    weapon.damage,
+    (m.damageModifier ?? 0) + meltaBonus,
+    meltaBonus ? `Melta ${meltaBonus} — within half range` : undefined
+  );
 
   return { attacks, skill, strength, ap, damage };
 }
@@ -87,19 +102,24 @@ function meltaValue(weapon: DataWeapon): number {
  * "D6" with +2 becomes "D6+2" rather than a number, because the roll is still
  * a roll — collapsing it to an average here would disagree with the engine.
  */
-function numeric(printed: string | null, bonus: number): Shown {
+function numeric(printed: string | null, bonus: number, reason?: string): Shown {
   const text = printed ?? '—';
   if (!bonus) return plain(text);
 
+  // A fixed characteristic just becomes a different number.
   const fixed = Number(text);
   if (Number.isFinite(fixed)) return moved(text, String(Math.max(0, fixed + bonus)));
 
+  // A die expression keeps its roll and carries the bonus alongside, so the
+  // addition stays visible as an addition.
   const tail = /([+-])\s*(\d+)$/.exec(text);
   if (tail) {
-    const current = Number(tail[1] + tail[2]);
-    const total = current + bonus;
+    const total = Number(tail[1] + tail[2]) + bonus;
     const head = text.slice(0, tail.index);
-    return moved(text, total === 0 ? head : `${head}${total > 0 ? '+' : ''}${total}`);
+    const suffix = total === 0 ? '' : `${total > 0 ? '+' : ''}${total}`;
+    return moved(text, `${head}${suffix}`, { base: head, bonus: suffix, reason });
   }
-  return moved(text, `${text}${bonus > 0 ? '+' : ''}${bonus}`);
+
+  const suffix = `${bonus > 0 ? '+' : ''}${bonus}`;
+  return moved(text, `${text}${suffix}`, { base: text, bonus: suffix, reason });
 }
