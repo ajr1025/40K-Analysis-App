@@ -74,6 +74,12 @@ export interface Weapon {
   melta?: number;
   /** [LANCE]: +1 to wound when the attacking unit charged this turn. */
   lance?: boolean;
+  /**
+   * [HEAVY]: +1 to hit if the unit Remained Stationary this turn. Carried by
+   * 543 weapons -- every bolt rifle, melta rifle and lascannon in the game --
+   * so leaving it out understates a gunline that did what gunlines do.
+   */
+  heavy?: boolean;
   /** Melee weapons ignore Benefit of Cover, which applies to ranged attacks only. */
   melee?: boolean;
   /**
@@ -187,6 +193,8 @@ export interface Modifiers {
    * are standing, so it is the player's call.
    */
   halfRange?: boolean;
+  /** The unit Remained Stationary, which switches on [HEAVY]. */
+  stationary?: boolean;
   /** The attacking unit charged this turn, which switches on [LANCE]. */
   charged?: boolean;
   /**
@@ -385,11 +393,15 @@ function landingHitsPerAttack(
   const ignoresCover = weapon.ignoresCover || modifiers.grantIgnoresCover;
   const coverPenalty = modifiers.cover && !weapon.melee && !ignoresCover ? 1 : 0;
 
+  // [HEAVY] is a hit-roll modifier like any other, so it goes inside the cap:
+  // a unit already at +1 gains nothing further by standing still.
+  const heavyBonus = weapon.heavy && modifiers.stationary ? 1 : 0;
+
   const hit = weapon.torrent
     ? { crit: 0, normal: 1, fail: 0, pass: 1 }
     : roll({
         target: (weapon.skill ?? 4) + coverPenalty,
-        modifier: capRollModifier(modifiers.hitModifier ?? 0),
+        modifier: capRollModifier((modifiers.hitModifier ?? 0) + heavyBonus),
         critOn: modifiers.critHitOn ?? 6,
         reroll: modifiers.rerollHits ?? 'none',
       });

@@ -218,6 +218,14 @@ export const MODIFIER_CONTROLS: ModifierControl[] = [
   },
   {
     kind: 'toggle',
+    field: 'stationary',
+    label: 'Remained stationary',
+    group: 'situation',
+    default: false,
+    hint: 'Switches on [HEAVY], which adds 1 to the Hit roll. 543 weapons carry it.',
+  },
+  {
+    kind: 'toggle',
     field: 'charged',
     label: 'Charged this turn',
     group: 'situation',

@@ -296,3 +296,44 @@ describe('Anti-X wording variants', () => {
     expect(applyAnti(w, infantry).critWoundOn).toBe(2);
   });
 });
+
+describe('[HEAVY] adds 1 to the Hit roll when the unit stayed still', () => {
+  // Cross-checked against mathhammer.io, which models this and which we
+  // matched distribution-for-distribution once it was implemented. 543 weapons
+  // carry Heavy -- every bolt rifle, melta rifle and lascannon -- so leaving it
+  // out understated every gunline that did what gunlines do.
+
+  it('improves the hit roll only while stationary', () => {
+    const w = weapon({ skill: 4, attacks: '12', strength: 10, heavy: true });
+    const t = target({ toughness: 4, save: 7, wounds: 1, models: 20 });
+
+    // BS4+ lands 6 of 12; stationary makes it 3+ and lands 8.
+    near(resolveAttack(w, t, {})!.totalDamage, 6 * (5 / 6));
+    near(resolveAttack(w, t, { stationary: true })!.totalDamage, 8 * (5 / 6));
+  });
+
+  it('does nothing for a weapon without the keyword', () => {
+    const w = weapon({ skill: 4, attacks: '12', strength: 10 });
+    const t = target({ toughness: 4, save: 7, wounds: 1, models: 20 });
+    near(
+      resolveAttack(w, t, { stationary: true })!.totalDamage,
+      resolveAttack(w, t, {})!.totalDamage
+    );
+  });
+
+  it('stays inside the +/-1 cap rather than stacking past it', () => {
+    // A unit already at +1 to hit gains nothing further by standing still.
+    const w = weapon({ skill: 4, attacks: '12', strength: 10, heavy: true });
+    const t = target({ toughness: 4, save: 7, wounds: 1, models: 20 });
+    near(
+      resolveAttack(w, t, { hitModifier: 1, stationary: true })!.totalDamage,
+      resolveAttack(w, t, { hitModifier: 1 })!.totalDamage
+    );
+  });
+
+  it('reads the keyword off a real datasheet', () => {
+    // A melta rifle is "Heavy, Melta 2".
+    expect(readKeywords(['Heavy', 'Melta 2']).heavy).toBe(true);
+    expect(readKeywords(['Assault']).heavy).toBe(false);
+  });
+});

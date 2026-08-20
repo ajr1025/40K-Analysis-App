@@ -171,6 +171,7 @@ export function readKeywords(keywords: string[]) {
     rapidFire: 0,
     melta: 0,
     lance: false,
+    heavy: false,
     extraAttacks: false,
     ignoresCover: false,
     conditionalAbilities: [] as NonNullable<Weapon['conditionalAbilities']>,
@@ -247,6 +248,7 @@ export function readKeywords(keywords: string[]) {
     else if (/^torrent$/i.test(keyword)) flags.torrent = true;
     else if (/^twin-?linked$/i.test(keyword)) flags.twinLinked = true;
     else if (/^lance$/i.test(keyword)) flags.lance = true;
+    else if (/^heavy$/i.test(keyword)) flags.heavy = true;
     else if (/^extra attacks$/i.test(keyword)) flags.extraAttacks = true;
     else if (/^ignores cover$/i.test(keyword)) flags.ignoresCover = true;
   }
