@@ -12,6 +12,7 @@
 
 import { useMemo } from 'react';
 
+import type { ConditionalBuff } from '../engine/conditions';
 import type { Detachment } from '../engine/detachments';
 import type { Modifiers } from '../engine/resolve';
 import {
@@ -29,6 +30,7 @@ interface Props {
   modifiers: Modifiers;
   scope: WeaponScope;
   detachment: Detachment | null;
+  armyRule: ConditionalBuff | null;
   active: number;
   onPick: (index: number) => void;
   onRemove: (id: string) => void;
@@ -40,6 +42,7 @@ export function Ranked({
   modifiers,
   scope,
   detachment,
+  armyRule,
   active,
   onPick,
   onRemove,
@@ -48,11 +51,11 @@ export function Ranked({
 
   const ranked = useMemo(() => {
     if (!attacker) return [];
-    const context = attackerContext(attacker, detachment, scope);
+    const context = attackerContext(attacker, detachment, scope, armyRule);
     return targets
       .map((target) => ({ target, cell: computeCell(context, target, modifiers) }))
       .sort((a, b) => b.cell.efficiency - a.cell.efficiency);
-  }, [attacker, targets, modifiers, scope, detachment]);
+  }, [attacker, targets, modifiers, scope, detachment, armyRule]);
 
   if (!attacker) return null;
 
@@ -78,7 +81,7 @@ export function Ranked({
 
       <div className="phone-attacker">
         {attacker.unit.name}
-        <small>{attackerContext(attacker, detachment, scope).label}</small>
+        <small>{attackerContext(attacker, detachment, scope, armyRule).label}</small>
       </div>
 
       {ranked.map(({ target, cell }) => (

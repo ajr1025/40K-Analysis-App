@@ -136,6 +136,14 @@ export default function App() {
   const detachment: Detachment | null =
     detachments.find((d) => d.name === detachmentName) ?? null;
 
+  // Nearly every army rule is conditional — a nominated target, an active vow,
+  // a called Waaagh! — so picking one is the player asserting the condition is
+  // met, the same standing assumption as half range.
+  const armyRuleBuff = useMemo(
+    () => armyRules.find((r) => r.name === armyRule)?.buff ?? null,
+    [armyRules, armyRule]
+  );
+
   // --- share link -----------------------------------------------------------
   useEffect(() => {
     if (!restored) return;
@@ -239,7 +247,8 @@ export default function App() {
             shownTargets[selected.col],
             modifiers,
             scope,
-            detachment
+            detachment,
+            armyRuleBuff
           ),
         }
       : null;
@@ -400,6 +409,7 @@ export default function App() {
               modifiers={modifiers}
               scope={scope}
               detachment={detachment}
+              armyRule={armyRuleBuff}
               active={phoneUnit}
               onPick={setPhoneUnit}
               onRemove={(id) => {
@@ -422,6 +432,7 @@ export default function App() {
               modifiers={modifiers}
               scope={scope}
               detachment={detachment}
+              armyRule={armyRuleBuff}
               visible={visible}
               selected={selected}
               onSelect={(row, col) => setSelected({ row, col })}

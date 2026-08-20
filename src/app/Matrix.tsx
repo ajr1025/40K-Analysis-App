@@ -11,6 +11,7 @@
 
 import { useMemo } from 'react';
 
+import type { ConditionalBuff } from '../engine/conditions';
 import type { Detachment } from '../engine/detachments';
 import type { Modifiers } from '../engine/resolve';
 import {
@@ -29,6 +30,7 @@ interface Props {
   modifiers: Modifiers;
   scope: WeaponScope;
   detachment: Detachment | null;
+  armyRule: ConditionalBuff | null;
   visible: (target: TargetEntry) => boolean;
   selected: { row: number; col: number } | null;
   onSelect: (row: number, col: number) => void;
@@ -44,6 +46,7 @@ export function Matrix({
   modifiers,
   scope,
   detachment,
+  armyRule,
   visible,
   selected,
   onSelect,
@@ -86,6 +89,7 @@ export function Matrix({
               modifiers={modifiers}
               scope={scope}
               detachment={detachment}
+              armyRule={armyRule}
               selected={selected}
               onSelect={onSelect}
               onRemove={onRemove}
@@ -107,6 +111,7 @@ interface RowProps {
   modifiers: Modifiers;
   scope: WeaponScope;
   detachment: Detachment | null;
+  armyRule: ConditionalBuff | null;
   selected: { row: number; col: number } | null;
   onSelect: (row: number, col: number) => void;
   onRemove: (id: string) => void;
@@ -122,6 +127,7 @@ function Row({
   modifiers,
   scope,
   detachment,
+  armyRule,
   selected,
   onSelect,
   onRemove,
@@ -130,9 +136,9 @@ function Row({
   panel,
 }: RowProps) {
   const cells = useMemo(() => {
-    const context = attackerContext(attacker, detachment, scope);
+    const context = attackerContext(attacker, detachment, scope, armyRule);
     return targets.map((target) => computeCell(context, target, modifiers));
-  }, [attacker, targets, modifiers, scope, detachment]);
+  }, [attacker, targets, modifiers, scope, detachment, armyRule]);
 
   const average = cells.length
     ? cells.reduce((sum, c) => sum + c.efficiency, 0) / cells.length
@@ -212,7 +218,8 @@ export function cellFor(
   target: TargetEntry,
   modifiers: Modifiers,
   scope: WeaponScope,
-  detachment: Detachment | null
+  detachment: Detachment | null,
+  armyRule: ConditionalBuff | null
 ): Cell {
-  return computeCell(attackerContext(attacker, detachment, scope), target, modifiers);
+  return computeCell(attackerContext(attacker, detachment, scope, armyRule), target, modifiers);
 }

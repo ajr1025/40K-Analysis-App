@@ -111,7 +111,13 @@ export interface AttackerContext {
 export function attackerContext(
   attacker: Attacker,
   detachment: Detachment | null,
-  scope: WeaponScope
+  scope: WeaponScope,
+  /**
+   * The army rule in play. Nearly all of them are conditional — a nominated
+   * target, an active vow, a called Waaagh! — so choosing one in the toolbar
+   * is the player asserting the condition is met, the same way half range is.
+   */
+  armyRule: ConditionalBuff | null = null
 ): AttackerContext {
   const kind = scope === 'all' ? undefined : scope;
   const size = loadoutSize(attacker.loadout);
@@ -152,6 +158,7 @@ export function attackerContext(
   }
 
   buffs = [...buffs, ...detachmentBuffs(detachment, attacker.enabled)];
+  if (armyRule) buffs = [...buffs, armyRule];
 
   const squadPoints = pointsFor(attacker.unit, size);
   const combined = leader ? attachedPoints({ leader, bodyguard: attacker.unit }) : null;
