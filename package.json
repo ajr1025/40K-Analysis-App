@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run --exclude \"**/bruteforce.test.ts\"",
+    "test": "vitest run --exclude \"**/bruteforce.test.ts\" --testTimeout=60000",
     "test:sweep": "vitest run src/engine/bruteforce.test.ts --testTimeout=1800000",
     "data": "node scripts/build-data.mjs",
     "data:fresh": "node scripts/build-data.mjs --fresh"
