@@ -9,7 +9,7 @@
  *   npx vitest run src/engine/benchmarkspecs.test.ts
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, it } from 'vitest';
@@ -140,6 +140,25 @@ describe('benchmark specs', () => {
     }
 
     say('efficiency = (models slain / target models) x target points / attacker points');
-    writeFileSync(join(process.cwd(), '.cache', 'benchmarks.txt'), lines.join('\n'), 'utf8');
+    writeReport('benchmarks.txt', lines.join('\n'));
   });
 });
+
+/**
+ * Dump a report for eyeballing, without letting it fail the run.
+ *
+ * `.cache` is gitignored, so on a fresh clone the directory does not exist and
+ * the write throws. That is how a suite passing on my machine every time
+ * failed the first moment CI ran it: the directory had been sitting there
+ * since the first data build. The report is a convenience; the assertions
+ * above are the test.
+ */
+function writeReport(name: string, text: string): void {
+  try {
+    const dir = join(process.cwd(), '.cache');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, name), text, 'utf8');
+  } catch {
+    // The numbers are in the console output either way.
+  }
+}

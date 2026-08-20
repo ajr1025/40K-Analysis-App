@@ -15,7 +15,7 @@
  *   npx vitest run src/engine/bruteforce.test.ts
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -200,6 +200,7 @@ describeWithData('full cross-product sweep', () => {
         for (const v of violations.slice(0, 40)) console.log('   ' + v);
       }
 
+      mkdirSync(join(process.cwd(), '.cache'), { recursive: true });
       writeFileSync(
         join(process.cwd(), '.cache', 'bruteforce-report.txt'),
         [
