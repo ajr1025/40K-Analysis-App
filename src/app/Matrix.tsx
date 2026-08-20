@@ -9,7 +9,7 @@
  * editing one unit's wargear does not re-resolve the whole board.
  */
 
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 
 import type { ConditionalBuff } from '../engine/conditions';
 import type { Detachment } from '../engine/detachments';
@@ -148,8 +148,11 @@ function Row({
     0
   );
 
+  const span = targets.length + 3;
+
   return (
-    <tr>
+    <Fragment>
+      <tr>
       <th className="rowhead">
         <div className="rowtop">
           <button
@@ -173,9 +176,6 @@ function Row({
           >
             ×
           </button>
-        </div>
-        <div className="loadout" hidden={!expanded}>
-          {expanded ? panel : null}
         </div>
       </th>
 
@@ -208,7 +208,21 @@ function Row({
       <td className="summary">
         <span className="best">{targets[best]?.unit.name ?? '—'}</span>
       </td>
-    </tr>
+      </tr>
+
+      {/*
+        The panel gets its own full-width row rather than living inside the
+        first cell. Inside it, expanding the wargear widened the sticky column
+        and squeezed every target out of view.
+      */}
+      {expanded ? (
+        <tr className="panelrow">
+          <td colSpan={span}>
+            <div className="loadout">{panel}</div>
+          </td>
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }
 

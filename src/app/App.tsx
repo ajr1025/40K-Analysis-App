@@ -13,6 +13,7 @@ import { attachableTo } from '../engine/attachment';
 import { type Detachment, readDetachments } from '../engine/detachments';
 import { collectArmyRules, rulesForFaction } from '../engine/armyrules';
 import type { Modifiers } from '../engine/resolve';
+import { BENCHMARK_TARGETS } from '../data/benchmarks';
 import { defaultModifiers } from '../data/modifier-controls';
 import { type SearchEntry, searchUnits } from '../data/search';
 import {
@@ -29,7 +30,6 @@ import { Matrix, cellFor } from './Matrix';
 import { ModifierDrawer } from './ModifierDrawer';
 import { Rail } from './Rail';
 import { Ranked } from './Ranked';
-import { useNarrow } from './useNarrow';
 import { decodeBoard, encodeBoard } from './url';
 import './app.css';
 
@@ -74,7 +74,10 @@ export default function App() {
   const [phoneUnit, setPhoneUnit] = useState(0);
   // Nothing is written to the address bar until any incoming board is restored.
   const [restored, setRestored] = useState(!INCOMING);
-  const narrow = useNarrow();
+  // The matrix works on a phone -- it scrolls sideways with the unit column
+  // pinned -- so it is the default everywhere. The ranked list stays as a
+  // choice for when you want one unit measured against everything.
+  const [view, setView] = useState<'matrix' | 'ranked'>('matrix');
 
   useEffect(() => {
     loadSearch().then(setIndex).catch((e: Error) => setLoadError(e.message));
@@ -109,6 +112,38 @@ export default function App() {
     },
     [rememberFaction]
   );
+
+  /**
+   * The yardstick targets.
+   *
+   * A curated spread rather than "every unit at this toughness" — Necron
+   * Warriors and Cadians are both chaff but 4+ against 5+, a Predator and a
+   * Redemptor are both T10 but 3+ against 2+. That spread is what makes a row
+   * of numbers tell you where to point the unit. They were sitting in the
+   * codebase with no way to put them on the board.
+   */
+  const addYardstick = useCallback(
+    async (spec: { unit: string; faction?: string; profile?: string; label?: string }) => {
+      const slug = spec.faction;
+      if (!slug) return;
+      const faction = await loadFaction(slug);
+      const unit = faction.units.find((u) => u.name === spec.unit);
+      if (!unit) return;
+      const entry = makeTarget(unit, faction, newId());
+      if (!entry) return;
+      rememberFaction(faction);
+      setTargets((current) =>
+        current.some((t) => t.unit.name === unit.name)
+          ? current
+          : sortTargets([...current, entry])
+      );
+    },
+    [rememberFaction]
+  );
+
+  const addAllYardsticks = useCallback(async () => {
+    for (const spec of BENCHMARK_TARGETS) await addYardstick(spec);
+  }, [addYardstick]);
 
   // --- army rules and detachments come from the factions on the board ------
   const armyRules = useMemo(() => {
@@ -265,6 +300,19 @@ export default function App() {
 
       <div className="panel">
         <div className="toolbar">
+          <div className="seg" role="group" aria-label="View">
+            {(['matrix', 'ranked'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={view === option}
+                onClick={() => setView(option)}
+              >
+                {option === 'matrix' ? 'Matrix' : 'Ranked'}
+              </button>
+            ))}
+          </div>
+
           <div className="seg" role="group" aria-label="Weapons">
             {(['all', 'ranged', 'melee'] as const).map((option) => (
               <button
@@ -352,7 +400,34 @@ export default function App() {
             index={index}
             already={(name) => targets.some((t) => t.unit.name === name)}
             onPick={addTarget}
-          />
+          >
+            <div className="yardsticks">
+              <div className="ylabel">
+                <span className="label">Yardsticks</span>
+                <button type="button" className="yall" onClick={() => void addAllYardsticks()}>
+                  Add all {BENCHMARK_TARGETS.length}
+                </button>
+              </div>
+              <div className="ychips">
+                {BENCHMARK_TARGETS.map((spec) => {
+                  const name = spec.label ?? spec.unit;
+                  const on = targets.some((t) => t.unit.name === spec.unit);
+                  return (
+                    <button
+                      key={`${spec.faction}:${spec.unit}`}
+                      type="button"
+                      className="ychip"
+                      aria-pressed={on}
+                      disabled={on}
+                      onClick={() => void addYardstick(spec)}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </SearchZone>
         </div>
 
         {bands.length ? (
@@ -402,7 +477,7 @@ export default function App() {
 
       <div className="board">
         <div>
-          {narrow && !empty ? (
+          {view === 'ranked' && !empty ? (
             <Ranked
               attackers={attackers}
               targets={shownTargets}
@@ -478,9 +553,10 @@ interface ZoneProps {
   index: SearchEntry[];
   already: (name: string) => boolean;
   onPick: (hit: SearchEntry) => void;
+  children?: React.ReactNode;
 }
 
-function SearchZone({ id, title, hint, placeholder, index, already, onPick }: ZoneProps) {
+function SearchZone({ id, title, hint, placeholder, index, already, onPick, children }: ZoneProps) {
   const [query, setQuery] = useState('');
   const hits = useMemo(
     () => (query.trim() ? searchUnits(index, query, { limit: 40 }) : []),
@@ -539,6 +615,7 @@ function SearchZone({ id, title, hint, placeholder, index, already, onPick }: Zo
           </div>
         ))}
       </div>
+      {children}
     </div>
   );
 }

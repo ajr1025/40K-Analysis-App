@@ -137,6 +137,22 @@
   .rhit:hover, .rhit:focus-visible { background: var(--raised); color: var(--ink); outline: none; }
   .rhit .pts { color: var(--ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
+  /* ---------- yardstick targets ---------- */
+  .yardsticks { margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--rule-soft); }
+  .ylabel { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .yall {
+    appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 12px; padding: 3px 9px; border-radius: var(--r); cursor: pointer;
+  }
+  .yall:hover { color: var(--ink); border-color: var(--bronze-dim); }
+  .ychips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .ychip {
+    appearance: none; border: 1px solid var(--rule); background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 12px; padding: 3px 8px; border-radius: var(--r); cursor: pointer;
+  }
+  .ychip:hover:not(:disabled) { color: var(--ink); border-color: var(--bronze-dim); }
+  .ychip:disabled { opacity: .4; cursor: default; }
+
   /* ---------- filters ---------- */
   .filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 12px 18px; border-top: 1px solid var(--rule-soft); }
   .tchip {
@@ -229,7 +245,10 @@
   .best { padding: 10px 12px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
 
   /* ---------- loadout ---------- */
-  .loadout { padding: 6px 0 12px 22px; }
+  /* The panel spans the table, but its contents stay pinned to the left edge
+     so they remain readable when the matrix is scrolled sideways. */
+  .panelrow > td { padding: 0; border-bottom: 1px solid var(--rule-soft); background: var(--page-2); }
+  .loadout { position: sticky; left: 0; padding: 12px 18px 16px; max-width: min(720px, 92vw); }
   .lmeta { font-size: 12px; color: var(--ink-3); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
   .wtable { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .wtable th {
@@ -349,15 +368,26 @@
     .zone + .zone { border-left: 0; border-top: 1px solid var(--rule-soft); }
   }
 
-  /* A phone gets the ranked view, so the page only has to hold one column. */
+  /* The matrix survives a phone by scrolling sideways with the unit column
+     pinned, so the layout tightens rather than switching to something else. */
   @media (max-width: 760px) {
-    .wrap { padding: 18px 13px 48px; }
+    .wrap { padding: 18px 11px 48px; }
     .masthead h1 { font-size: 24px; }
-    .toolbar { gap: 10px; padding: 11px 13px; }
+    .toolbar { gap: 9px; padding: 11px 12px; }
     .toolbar .spacer { display: none; }
     .field { flex: 1 1 100%; }
     .field select { flex: 1; }
-    .zone { padding: 13px 13px 15px; }
+    .zone { padding: 13px 12px 15px; }
     .legend { display: none; }
+
+    .matrix-shell { max-height: none; }
+    /* Narrow enough to leave room for two or three target columns. */
+    tbody th.rowhead { padding: 9px 10px 9px 12px; max-width: 148px; }
+    thead th.rowhead { padding-left: 12px; }
+    .rowname { font-size: 13px; white-space: normal; }
+    .thead-name { max-width: 74px; font-size: 11.5px; }
+    .cell { min-width: 52px; }
+    .loadout { padding: 11px 12px 14px; max-width: 94vw; }
+    .board { gap: 12px; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
