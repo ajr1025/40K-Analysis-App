@@ -428,18 +428,27 @@ export function profilesFor(
 export function chooseModes(
   entries: LoadoutEntry[],
   target: Target,
-  modifiers: Modifiers = {}
+  modifiers: Modifiers = {},
+  /**
+   * Profiles the player has chosen by hand. Picking a mode for them is a
+   * convenience, not a correction -- once they have said "analyse the Sweep",
+   * switching them to the Strike because it scores better would be ignoring
+   * the question they asked.
+   */
+  explicit: Set<string> = new Set()
 ): LoadoutEntry[] {
   const groups = new Map<string, LoadoutEntry[]>();
   const out: LoadoutEntry[] = [];
 
   for (const entry of entries) {
     const base = modeBase(entry.weapon.name);
-    if (base === entry.weapon.name) {
+    if (base === entry.weapon.name || explicit.has(entry.weapon.name)) {
       out.push(entry);
       continue;
     }
-    const key = `${base}@${entry.models}`;
+    // Grouped by kind as well as name: a Singing Spear is a thrown weapon and
+    // a melee weapon, not two modes of one attack.
+    const key = `${base}@${entry.weapon.melee ? 'melee' : 'ranged'}@${entry.models}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(entry);
   }

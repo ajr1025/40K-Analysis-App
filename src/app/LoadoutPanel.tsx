@@ -23,7 +23,7 @@ import { optionalRules } from '../engine/detachments';
 import type { ConditionalBuff } from '../engine/conditions';
 import type { Modifiers } from '../engine/resolve';
 import { resolveBuffs } from '../engine/conditions';
-import { type Attacker, type TargetEntry, attackerContext, unitBuffs, weaponKey } from './board';
+import { type Attacker, type TargetEntry, attackerContext, unitBuffs } from './board';
 import { type Shown, shownProfile } from './profile';
 
 interface Props {
@@ -270,27 +270,29 @@ function WeaponTable({
   const meleeBuffs = forKind(true);
   const rangedBuffs = forKind(false);
   const built = new Map<string, number>();
-  for (const entry of loadoutEntries(attacker.unit, attacker.loadout)) {
-    const key = weaponKey(entry.weapon.name);
-    built.set(key, (built.get(key) ?? 0) + entry.models);
+  for (const entry of loadoutEntries(attacker.unit, attacker.loadout, undefined, true)) {
+    built.set(entry.weapon.name, (built.get(entry.weapon.name) ?? 0) + entry.models);
   }
 
-  // One row per weapon, firing modes folded together — they are one gun.
-  const seen = new Set<string>();
-  const rows = (attacker.unit.weapons ?? []).filter((w) => {
-    const key = weaponKey(w.name);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  /*
+   * A row per profile, not per weapon.
+   *
+   * Folding "- Strike" and "- Sweep" into one row lost them: an Avatar of
+   * Khaine's Wailing Doom is a ranged profile and two melee ones sharing a
+   * name, so the table kept the first and dropped the melee entirely. 120
+   * datasheets have a weapon that is both thrown and swung — every Singing
+   * Spear, Laser Lance and Triskele in the game.
+   *
+   * Each profile gets its own count so the player picks which to analyse.
+   */
+  const rows = attacker.unit.weapons ?? [];
 
-  const countOfWeapon = (name: string) =>
-    attacker.weapons[weaponKey(name)] ?? built.get(weaponKey(name)) ?? 0;
+  const countOfWeapon = (name: string) => attacker.weapons[name] ?? built.get(name) ?? 0;
 
   const setWeapon = (name: string, n: number) =>
     onChange({
       ...attacker,
-      weapons: { ...attacker.weapons, [weaponKey(name)]: Math.max(0, n) },
+      weapons: { ...attacker.weapons, [name]: Math.max(0, n) },
     });
 
   return (
@@ -337,7 +339,7 @@ function WeaponTable({
               </td>
               <td>
                 {w.kind === 'melee' ? '⚔ ' : ''}
-                {weaponKey(w.name)}
+                {w.name}
               </td>
               <td>{w.range ?? (w.kind === 'melee' ? 'Melee' : '—')}</td>
               <Stat shown={p.attacks} />

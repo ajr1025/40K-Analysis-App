@@ -128,6 +128,12 @@ export interface AttackerContext {
   assumedLoadout: boolean;
   unmodelled: string[];
   label: string;
+  /**
+   * Profiles the player set a count for. An Avatar of Khaine's Wailing Doom
+   * has a Strike and a Sweep profile; normally the engine picks whichever
+   * suits the target, but once the player has chosen, that choice stands.
+   */
+  explicit: Set<string>;
 }
 
 export function attackerContext(
@@ -199,6 +205,7 @@ export function attackerContext(
     assumedLoadout: loadoutIsAssumed(attacker.unit),
     unmodelled,
     label: loadoutLabel(attacker),
+    explicit: new Set(Object.keys(attacker.weapons)),
   };
 }
 
@@ -216,7 +223,7 @@ function applyWeaponCounts(entries: LoadoutEntry[], attacker: Attacker): Loadout
 
   return entries
     .map((entry) => {
-      const override = counts[weaponKey(entry.weapon.name)];
+      const override = counts[entry.weapon.name];
       return override === undefined ? entry : { ...entry, models: override };
     })
     .filter((entry) => entry.models > 0);
@@ -305,7 +312,8 @@ export function computeCell(
       ),
     })),
     entry.target,
-    modifiers
+    modifiers,
+    context.explicit
   );
 
   const result = resolveLoadout(perEntry, entry.target, {
